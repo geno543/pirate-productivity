@@ -41,7 +41,78 @@ class Store {
       }
     }
   
-    saveState() {
+    async init() {
+      try {
+        // Load data from API or use defaults
+        await Promise.all([
+          this.fetchUserData(),
+          this.fetchQuests()
+        ]);
+
+        console.log('Store initialized successfully');
+      } catch (error) {
+        console.warn('Failed to initialize from API, using default values');
+      }
+    }
+
+    async fetchUserData() {
+      try {
+        const response = await fetch('/api/user-data');
+        if (!response.ok) throw new Error('Failed to fetch user data');
+        const data = await response.json();
+        
+        // Update state with user data
+        this.state.coins = data.coins || 0;
+        this.state.currentStreak = data.streak || 0;
+        this.state.longestStreak = data.longestStreak || 0;
+        this.state.unlockedAchievements = data.achievements || [];
+        
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+        throw error;
+      }
+    }
+
+    async fetchQuests() {
+      try {
+        const response = await fetch('/api/quests');
+        if (!response.ok) throw new Error('Failed to fetch quests');
+        const quests = await response.json();
+        
+        this.state.quests = quests;
+        this.updateQuestStats();
+        
+      } catch (error) {
+        console.error('Error fetching quests:', error);
+        throw error;
+      }
+    }
+
+    async saveState() {
+      try {
+        const userData = {
+          coins: this.state.coins,
+          streak: this.state.currentStreak,
+          longestStreak: this.state.longestStreak,
+          achievements: this.state.unlockedAchievements
+        };
+
+        const response = await fetch('/api/user-data', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userData)
+        });
+
+        if (!response.ok) throw new Error('Failed to save user data');
+        
+      } catch (error) {
+        console.error('Error saving state:', error);
+      }
+    }
+  
+    saveStateLocal() {
       try {
         localStorage.setItem('pirateAppState', JSON.stringify(this.state));
         return true;
@@ -82,6 +153,7 @@ class Store {
   
       this.state.quests = [...this.getQuests(), newQuest];
       this.saveState();
+      this.saveStateLocal();
       return newQuest;
     }
   
@@ -111,6 +183,7 @@ class Store {
       }
   
       this.saveState();
+      this.saveStateLocal();
       this.checkAchievements();
       return true;
     }
@@ -121,6 +194,7 @@ class Store {
   
       this.state.quests.splice(index, 1);
       this.saveState();
+      this.saveStateLocal();
       return true;
     }
   
@@ -135,6 +209,7 @@ class Store {
       const nextIndex = (currentIndex + 1) % weathers.length;
       this.state.weather = weathers[nextIndex];
       this.saveState();
+      this.saveStateLocal();
   
       // Dispatch weather change event
       window.dispatchEvent(
@@ -189,6 +264,7 @@ class Store {
       if (!this.state.unlockedAchievements.includes(achievementId)) {
         this.state.unlockedAchievements.push(achievementId);
         this.saveState();
+        this.saveStateLocal();
   
         window.dispatchEvent(
           new CustomEvent('achievementUnlocked', {
@@ -231,10 +307,23 @@ class Store {
       if (quest && position) {
         quest.position = position;
         this.saveState();
+        this.saveStateLocal();
       }
+    }
+  
+    updateQuestStats() {
+      this.state.questDistribution = {
+        easy: 0,
+        medium: 0,
+        hard: 0
+      };
+  
+      this.state.quests.forEach(quest => {
+        this.state.questDistribution[quest.difficulty]++;
+      });
     }
   }
   
   // Create and expose store instance globally
   window.store = new Store();
-  
+  window.store.init();

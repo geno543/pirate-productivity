@@ -2,7 +2,6 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
 const app = express();
-const port = process.env.PORT || 3000;
 
 // CORS middleware
 app.use((req, res, next) => {
@@ -16,53 +15,19 @@ app.use((req, res, next) => {
 app.use(express.json());
 
 // Configure static file serving
-const staticOptions = {
-    setHeaders: (res, path) => {
-        // Set proper MIME types for different file types
-        if (path.endsWith('.mp3')) {
-            res.set({
-                'Content-Type': 'audio/mpeg',
-                'Accept-Ranges': 'bytes',
-                'Cache-Control': 'public, max-age=31536000'
-            });
-        } else if (path.endsWith('.js')) {
-            res.set('Content-Type', 'application/javascript');
-        } else if (path.endsWith('.css')) {
-            res.set('Content-Type', 'text/css');
-        } else if (path.endsWith('.html')) {
-            res.set('Content-Type', 'text/html');
-        }
-    },
-    maxAge: '1y',
-    etag: true,
-    lastModified: true
-};
+app.use(express.static('public'));
 
-// Serve static files
-app.use(express.static('public', staticOptions));
-
-// Special route for sound files to ensure proper handling
-app.get('/sounds/:filename', (req, res) => {
-    const soundPath = path.join(__dirname, 'public', 'sounds', req.params.filename);
-    res.sendFile(soundPath, {
-        headers: {
-            'Content-Type': 'audio/mpeg',
-            'Accept-Ranges': 'bytes'
-        }
-    });
-});
-
-// Data storage paths
-const QUESTS_FILE = path.join(__dirname, 'data', 'quests.json');
-const USER_FILE = path.join(__dirname, 'data', 'user.json');
+// Data storage paths - use /tmp for Vercel
+const DATA_DIR = process.env.VERCEL ? '/tmp' : path.join(__dirname, 'data');
+const QUESTS_FILE = path.join(DATA_DIR, 'quests.json');
+const USER_FILE = path.join(DATA_DIR, 'user.json');
 
 // Ensure data directory exists
 async function ensureDataDir() {
-    const dataDir = path.join(__dirname, 'data');
     try {
-        await fs.access(dataDir);
+        await fs.access(DATA_DIR);
     } catch {
-        await fs.mkdir(dataDir);
+        await fs.mkdir(DATA_DIR, { recursive: true });
     }
 }
 
@@ -90,110 +55,93 @@ async function initializeDataFiles() {
     }
 }
 
+// Initialize data files on startup
+initializeDataFiles().catch(console.error);
+
 // Quest Routes
 app.get('/api/quests', async (req, res) => {
     try {
-        const data = await fs.readFile(QUESTS_FILE, 'utf8');
+        await ensureDataDir();
+        let data;
+        try {
+            data = await fs.readFile(QUESTS_FILE, 'utf8');
+        } catch {
+            data = '[]';
+            await fs.writeFile(QUESTS_FILE, data);
+        }
         res.json(JSON.parse(data));
     } catch (error) {
+        console.error('Error fetching quests:', error);
         res.status(500).json({ error: 'Failed to fetch quests' });
     }
 });
 
 app.post('/api/quests', async (req, res) => {
     try {
-        const { title, difficulty, deadline } = req.body;
-        if (!title || !difficulty) {
-            return res.status(400).json({ error: 'Title and difficulty are required' });
+        await ensureDataDir();
+        const quest = req.body;
+        let quests;
+        try {
+            const data = await fs.readFile(QUESTS_FILE, 'utf8');
+            quests = JSON.parse(data);
+        } catch {
+            quests = [];
         }
-
-        const data = await fs.readFile(QUESTS_FILE, 'utf8');
-        const quests = JSON.parse(data);
-        
-        const newQuest = {
-            id: Date.now(),
-            title,
-            difficulty,
-            deadline: deadline || null,
-            status: 'active',
-            createdAt: new Date().toISOString()
-        };
-        
-        quests.push(newQuest);
-        await fs.writeFile(QUESTS_FILE, JSON.stringify(quests, null, 2));
-        
-        res.status(201).json(newQuest);
+        quests.push(quest);
+        await fs.writeFile(QUESTS_FILE, JSON.stringify(quests));
+        res.json(quest);
     } catch (error) {
+        console.error('Error creating quest:', error);
         res.status(500).json({ error: 'Failed to create quest' });
     }
 });
 
-app.put('/api/quests/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        const updates = req.body;
-        
-        const data = await fs.readFile(QUESTS_FILE, 'utf8');
-        const quests = JSON.parse(data);
-        
-        const questIndex = quests.findIndex(q => q.id === parseInt(id));
-        if (questIndex === -1) {
-            return res.status(404).json({ error: 'Quest not found' });
-        }
-        
-        quests[questIndex] = { ...quests[questIndex], ...updates };
-        await fs.writeFile(QUESTS_FILE, JSON.stringify(quests, null, 2));
-        
-        res.json(quests[questIndex]);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to update quest' });
-    }
-});
-
-app.delete('/api/quests/:id', async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const data = await fs.readFile(QUESTS_FILE, 'utf8');
-        const quests = JSON.parse(data);
-        
-        const questIndex = quests.findIndex(q => q.id === parseInt(id));
-        if (questIndex === -1) {
-            return res.status(404).json({ error: 'Quest not found' });
-        }
-        
-        quests.splice(questIndex, 1);
-        await fs.writeFile(QUESTS_FILE, JSON.stringify(quests, null, 2));
-        
-        res.status(204).send();
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to delete quest' });
-    }
-});
-
 // User Routes
-app.get('/api/user', async (req, res) => {
+app.get('/api/user-data', async (req, res) => {
     try {
-        const data = await fs.readFile(USER_FILE, 'utf8');
+        await ensureDataDir();
+        let data;
+        try {
+            data = await fs.readFile(USER_FILE, 'utf8');
+        } catch {
+            const defaultUser = {
+                coins: 0,
+                streak: 0,
+                lastLogin: null,
+                achievements: [],
+                inventory: []
+            };
+            data = JSON.stringify(defaultUser);
+            await fs.writeFile(USER_FILE, data);
+        }
         res.json(JSON.parse(data));
     } catch (error) {
+        console.error('Error fetching user data:', error);
         res.status(500).json({ error: 'Failed to fetch user data' });
     }
 });
 
-app.put('/api/user', async (req, res) => {
+app.put('/api/user-data', async (req, res) => {
     try {
-        const updates = req.body;
-        const data = await fs.readFile(USER_FILE, 'utf8');
-        const user = JSON.parse(data);
-        
-        const updatedUser = { ...user, ...updates };
-        await fs.writeFile(USER_FILE, JSON.stringify(updatedUser, null, 2));
-        
-        res.json(updatedUser);
+        await ensureDataDir();
+        const userData = req.body;
+        await fs.writeFile(USER_FILE, JSON.stringify(userData));
+        res.json(userData);
     } catch (error) {
+        console.error('Error updating user data:', error);
         res.status(500).json({ error: 'Failed to update user data' });
     }
+});
+
+// Special route for sound files to ensure proper handling
+app.get('/sounds/:filename', (req, res) => {
+    const soundPath = path.join(__dirname, 'public', 'sounds', req.params.filename);
+    res.sendFile(soundPath, {
+        headers: {
+            'Content-Type': 'audio/mpeg',
+            'Accept-Ranges': 'bytes'
+        }
+    });
 });
 
 // Achievement Routes
@@ -218,6 +166,7 @@ app.post('/api/achievements', async (req, res) => {
         
         res.status(201).json(user.achievements);
     } catch (error) {
+        console.error('Error adding achievement:', error);
         res.status(500).json({ error: 'Failed to add achievement' });
     }
 });
@@ -248,16 +197,18 @@ app.post('/api/streak/check', async (req, res) => {
         
         res.json({ streak: user.streak });
     } catch (error) {
+        console.error('Error updating streak:', error);
         res.status(500).json({ error: 'Failed to update streak' });
     }
 });
 
-// Initialize data and start server
-initializeDataFiles().then(() => {
+// Start server if not in Vercel
+if (!process.env.VERCEL) {
+    const port = process.env.PORT || 3000;
     app.listen(port, () => {
-        console.log(`Pirate app server running at http://localhost:${port}`);
+        console.log(`Server running on port ${port}`);
     });
-}).catch(error => {
-    console.error('Failed to initialize server:', error);
-    process.exit(1);
-});
+}
+
+// Export for Vercel
+module.exports = app;
