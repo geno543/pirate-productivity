@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pirate Productivity</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=MedievalSharp&display=swap" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <!-- Your main CSS -->
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="logo">
+        <i class="fas fa-skull-crossbones"></i>
+        <h1>Pirate Productivity</h1>
+      </div>
+      <div class="user-stats">
+        <div class="stat-item" title="Your Coins">
+          <i class="fas fa-coins"></i>
+          <span id="coinCount">0</span>
+        </div>
+        <div class="stat-item" title="Daily Streak">
+          <i class="fas fa-fire"></i>
+          <span id="streakCount">0</span>
+        </div>
+        <div class="weather-indicator" title="Current Weather">
+          <i class="fas fa-sun" id="currentWeatherIcon"></i>
+        </div>
+        <div class="header-buttons">
+          <button id="statsBtn" class="pirate-btn" title="View Stats">
+            <i class="fas fa-chart-bar"></i>
+          </button>
+          <button id="achievementsBtn" class="pirate-btn" title="Achievements">
+            <i class="fas fa-trophy"></i>
+          </button>
+          <button id="shopBtn" class="pirate-btn" title="Shop">
+            <i class="fas fa-store"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- MAP + QUESTS -->
+      <div class="map-container" data-weather="clear">
+        <div id="map"></div>
+        
+        <!-- Active Quests Panel -->
+        <div class="active-quests">
+          <div class="active-quests-header">
+            <h2><i class="fas fa-scroll"></i> Active Quests</h2>
+            <button id="addQuestBtn" class="map-control-btn">
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+          <div id="questList" class="quest-list">
+            <!-- Quests dynamically rendered here -->
+          </div>
+        </div>
+
+        <!-- Map Controls -->
+        <div class="map-controls">
+          <button id="weatherBtn" class="map-control-btn" title="Toggle Weather">
+            <i id="weatherToggleIcon" class="fas fa-sun"></i>
+          </button>
+          <button id="compassBtn" class="map-control-btn" title="Center on Ship">
+            <i class="fas fa-compass"></i>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Quest Modal -->
+    <div id="questModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-scroll"></i> New Quest</h2>
+          <button class="close-btn" onclick="closeModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <form id="questForm">
+          <div class="form-group">
+            <label for="questTitle">Quest Title</label>
+            <input type="text" id="questTitle" placeholder="Enter your quest title" required>
+          </div>
+          <div class="form-group">
+            <label for="questDifficulty">Difficulty Level</label>
+            <select id="questDifficulty" required>
+              <option value="easy">Easy (10 coins)</option>
+              <option value="medium">Medium (20 coins)</option>
+              <option value="hard">Hard (30 coins)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="questDeadline">Deadline (Optional)</label>
+            <input type="datetime-local" id="questDeadline">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="pirate-btn primary">
+              <i class="fas fa-ship"></i> Set Sail!
+            </button>
+            <button type="button" class="pirate-btn" onclick="closeModal()">
+              <i class="fas fa-times"></i> Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="statsModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-chart-bar"></i> Pirate Stats</h2>
+          <button class="close-btn" onclick="closeModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="stats-container">
+          <div class="stat-card">
+            <i class="fas fa-tasks"></i>
+            <h3>Total Quests</h3>
+            <p id="totalQuestsCompleted">0</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-coins"></i>
+            <h3>Total Coins</h3>
+            <p id="totalCoinsEarned">0</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-fire"></i>
+            <h3>Longest Streak</h3>
+            <p id="longestStreak">0</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-chart-pie"></i>
+            <h3>Quest Distribution</h3>
+            <div id="questDistribution"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Achievements Modal -->
+    <div id="achievementsModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-trophy"></i> Achievements</h2>
+          <button class="close-btn" onclick="closeModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="achievements-container" id="achievementsList">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Shop Modal -->
+    <div id="shopModal" class="modal hidden">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2><i class="fas fa-store"></i> Pirate Shop</h2>
+          <button class="close-btn" onclick="closeModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="shop-items">
+          <div class="shop-category">
+            <h3>Ship Customization</h3>
+            <div id="shipCustomizations" class="items-grid"></div>
+          </div>
+          <div class="shop-category">
+            <h3>Power-ups</h3>
+            <div id="powerUps" class="items-grid"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Container -->
+  <div id="notificationContainer" class="notification-container"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Howler JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+
+  <!-- Additional JS -->
+  <script src="js/sounds.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/pirateMap.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

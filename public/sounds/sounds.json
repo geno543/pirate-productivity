@@ -1,0 +1,30 @@
+{
+    "buttonClick": {
+        "src": "button-click.mp3",
+        "volume": 0.3
+    },
+    "notification": {
+        "src": "notification.mp3",
+        "volume": 0.3
+    },
+    "questComplete": {
+        "src": "quest-complete.mp3",
+        "volume": 0.4
+    },
+    "coinCollect": {
+        "src": "coin-collect.mp3",
+        "volume": 0.4
+    },
+    "shipMove": {
+        "src": "ship-move.mp3",
+        "volume": 0.2
+    },
+    "newQuest": {
+        "src": "new-quest.mp3",
+        "volume": 0.3
+    },
+    "sail": {
+        "src": "sail.mp3",
+        "volume": 0.3
+    }
+}

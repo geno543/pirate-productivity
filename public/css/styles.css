@@ -1,0 +1,1005 @@
+:root {
+    --primary-color: #1a2634;
+    --secondary-color: #2c3e50;
+    --accent-color: #f1c40f;
+    --accent-hover: #f39c12;
+    --bg-color: #34495e;
+    --text-color: #ecf0f1;
+    --danger-color: #e74c3c;
+    --success-color: #2ecc71;
+    --border-radius: 10px;
+    --transition: all 0.3s ease;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'MedievalSharp', cursive;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* Header Styles */
+header {
+    /* Add subtle gradient improvement */
+    background: linear-gradient(90deg, #1a2634, #121a25);
+    padding: 1rem 2rem;
+    display: flex;
+    flex-wrap: wrap; /* allow header items to wrap on smaller screens */
+    justify-content: space-between;
+    align-items: center;
+    min-height: 80px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.logo i {
+    font-size: 2rem;
+    color: var(--accent-color);
+}
+
+h1 {
+    font-family: 'Pirata One', cursive;
+    font-size: 2.5rem;
+    color: var(--accent-color);
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.user-stats {
+    display: flex;
+    gap: 2rem;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+}
+
+.stat-item i {
+    color: var(--accent-color);
+}
+
+/* Main Layout */
+main {
+    /* Removed forced height & overflow so content can grow/scroll */
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+/* Map Styles */
+.map-container {
+    position: relative;
+    width: 100%;
+    /* Let it size naturally; set a comfortable min-height for desktops */
+    min-height: 600px; 
+    /* remove overflow: hidden; to allow map to be visible on smaller screens */
+    background: #2c3e50;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    background: #2c3e50;
+}
+
+/* Active Quests Panel */
+.active-quests {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 300px;
+    background: rgba(44, 62, 80, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+}
+
+.active-quests-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 2px solid #34495e;
+}
+
+.active-quests-header h2 {
+    color: #ecf0f1;
+    font-size: 1.2em;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quest-list {
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.quest-item {
+    background: #34495e;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 12px;
+    transition: transform 0.2s ease;
+}
+
+.quest-item:hover {
+    transform: translateX(-5px);
+}
+
+.quest-item.done {
+    background: #27ae60;
+}
+
+.quest-info {
+    margin-bottom: 10px;
+}
+
+.quest-info h3 {
+    color: #ecf0f1;
+    margin: 0 0 5px 0;
+    font-size: 1.1em;
+}
+
+.quest-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.quest-actions button {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.9em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.quest-actions button i {
+    font-size: 1em;
+}
+
+/* Map Controls */
+.map-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.map-control-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #34495e;
+    border: 2px solid #3498db;
+    color: #ecf0f1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.map-control-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.map-control-btn i {
+    font-size: 1.2em;
+}
+
+/* Quest Difficulty Tags */
+.difficulty {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    color: #fff;
+    margin-right: 5px;
+}
+
+.difficulty.easy {
+    background: #2ecc71;
+}
+
+.difficulty.medium {
+    background: #f1c40f;
+    color: #2c3e50;
+}
+
+.difficulty.hard {
+    background: #e74c3c;
+}
+
+/* Empty State */
+.empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #95a5a6;
+}
+
+.empty-state i {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    color: #7f8c8d;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9em;
+}
+
+/* Deadline */
+.deadline {
+    font-size: 0.8em;
+    color: #bdc3c7;
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.deadline i {
+    color: #e74c3c;
+}
+
+/* Sidebar / Additional Panels */
+.right-sidebar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 300px;
+    height: 100%;
+    background: rgba(52, 73, 94, 0.9);
+    backdrop-filter: blur(5px);
+    padding: 20px;
+    overflow-y: auto;
+    z-index: 50;
+}
+
+/* More Panels */
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2c3e50;
+}
+
+.sidebar-header h2 {
+    color: #ecf0f1;
+    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quest-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.quest-item {
+    background: #2c3e50;
+    border-radius: 8px;
+    padding: 15px;
+    transition: transform 0.3s ease;
+}
+
+.quest-item:hover {
+    transform: translateX(-5px);
+}
+
+.quest-info {
+    margin-bottom: 10px;
+}
+
+.quest-info h3 {
+    color: #ecf0f1;
+    margin-bottom: 5px;
+    font-size: 1.1em;
+}
+
+.quest-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.quest-actions button {
+    flex: 1;
+    padding: 5px;
+    font-size: 0.9em;
+}
+
+/* Animations for the ship's wake */
+.ship-wake {
+    stroke: rgba(255, 255, 255, 0.5);
+    stroke-width: 2;
+    stroke-dasharray: 5, 10;
+    animation: wake 1s linear infinite;
+}
+@keyframes wake {
+    to {
+        stroke-dashoffset: -15;
+    }
+}
+
+/* Minor expansions for tasks, etc. */
+.task-panel {
+    background-color: var(--primary-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--accent-color);
+    height: 100%;
+    overflow-y: auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.panel-header {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--secondary-color);
+}
+
+.panel-header h2 {
+    font-family: 'Pirata One', cursive;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    background: var(--secondary-color);
+    border: none;
+    padding: 0.3rem 0.8rem;
+    border-radius: 15px;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.filter-btn.active {
+    background: var(--accent-color);
+    color: var(--primary-color);
+}
+
+/* Quest Items */
+.quest-item {
+    background-color: var(--secondary-color);
+    padding: 1rem;
+    margin: 0.5rem 0;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--accent-color);
+    transition: var(--transition);
+}
+.quest-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.quest-item h3 {
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+}
+
+/* Popups */
+.quest-popup {
+    padding: 1rem;
+    min-width: 200px;
+}
+.quest-popup h3 {
+    font-family: 'Pirata One', cursive;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--text-color);
+    text-align: center;
+}
+.quest-details {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+}
+.quest-difficulty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--border-radius);
+    font-size: 0.9rem;
+    text-transform: capitalize;
+}
+.quest-deadline {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: var(--border-radius);
+    background: rgba(33, 150, 243, 0.2);
+    color: #2196F3;
+    font-size: 0.9rem;
+}
+.quest-deadline.expired {
+    background: rgba(244, 67, 54, 0.2);
+    color: #F44336;
+}
+.quest-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+.quest-actions .pirate-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+.quest-actions .pirate-btn i {
+    margin-right: 0.3rem;
+}
+
+/* Button styles */
+.pirate-btn {
+    background-color: var(--secondary-color);
+    color: var(--text-color);
+    border: 2px solid var(--accent-color);
+    padding: 0.5rem 1rem;
+    border-radius: var(--border-radius);
+    font-family: 'MedievalSharp', cursive;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.pirate-btn:hover {
+    background-color: var(--accent-color);
+    color: var(--primary-color);
+    transform: translateY(-2px);
+}
+.pirate-btn.primary {
+    background-color: var(--accent-color);
+    color: var(--primary-color);
+}
+.pirate-btn.primary:hover {
+    background-color: var(--accent-hover);
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+.modal.hidden {
+    display: none;
+}
+.modal-content {
+    background: #34495e;
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2c3e50;
+}
+.close-btn {
+    background: none;
+    border: none;
+    color: #ecf0f1;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 5px;
+    transition: color 0.3s ease;
+}
+.close-btn:hover {
+    color: #e74c3c;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 1rem;
+}
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--accent-color);
+}
+input, select {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--secondary-color);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: inherit;
+    transition: var(--transition);
+}
+input:focus, select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Shop Styles */
+.shop-items {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.shop-category h3 {
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+}
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+/* Quests float animation */
+@keyframes float {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0); }
+}
+.quest-item {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Weather Effects */
+.map-container[data-weather="storm"] {
+    animation: stormEffect 2s infinite;
+}
+.map-container[data-weather="storm"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      linear-gradient(to bottom, 
+        rgba(52, 152, 219, 0.1),
+        rgba(52, 152, 219, 0.2)
+      );
+    pointer-events: none;
+    z-index: 10;
+}
+.map-container[data-weather="fog"]::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(236, 240, 241, 0.4);
+    pointer-events: none;
+    z-index: 10;
+    animation: fogEffect 10s infinite;
+}
+@keyframes stormEffect {
+    0% { filter: brightness(1); }
+    50% { filter: brightness(0.8); }
+    52% { filter: brightness(1.1); }
+    54% { filter: brightness(0.8); }
+    100% { filter: brightness(1); }
+}
+@keyframes fogEffect {
+    0% { opacity: 0.3; }
+    50% { opacity: 0.5; }
+    100% { opacity: 0.3; }
+}
+
+/* Weather Button Effects */
+#weatherBtn[data-weather="storm"] {
+    animation: stormButtonEffect 2s infinite;
+}
+#weatherBtn[data-weather="fog"] {
+    animation: fogButtonEffect 4s infinite;
+}
+@keyframes stormButtonEffect {
+    0% { box-shadow: 0 0 5px #3498db; }
+    50% { box-shadow: 0 0 15px #3498db; }
+    100% { box-shadow: 0 0 5px #3498db; }
+}
+@keyframes fogButtonEffect {
+    0% { box-shadow: 0 0 5px #bdc3c7; }
+    50% { box-shadow: 0 0 15px #bdc3c7; }
+    100% { box-shadow: 0 0 5px #bdc3c7; }
+}
+
+/* Stats Modal */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 10px;
+}
+.stat-card {
+    background: #2c3e50;
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+.stat-card i {
+    font-size: 2em;
+    margin-bottom: 10px;
+    color: #f1c40f;
+}
+.stat-card h3 {
+    margin: 10px 0;
+    color: #ecf0f1;
+}
+.stat-card p {
+    font-size: 1.5em;
+    color: #3498db;
+    font-weight: bold;
+}
+
+/* Achievements */
+.achievements-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+.achievement-card {
+    background: var(--secondary-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+.achievement-card.completed {
+    border-color: var(--success-color);
+}
+.achievement-card.locked {
+    opacity: 0.7;
+    filter: grayscale(1);
+}
+.achievement-card i {
+    font-size: 2rem;
+    color: var(--accent-color);
+    margin-bottom: 0.5rem;
+}
+.achievement-card h3 {
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+.achievement-card .description {
+    color: var(--text-color);
+    opacity: 0.8;
+    margin-bottom: 1rem;
+}
+.achievement-card .reward {
+    color: var(--accent-color);
+    font-weight: bold;
+}
+.achievement-progress {
+    width: 100%;
+    height: 4px;
+    background: var(--bg-color);
+    border-radius: 2px;
+    margin-top: 1rem;
+    overflow: hidden;
+}
+.achievement-progress .bar {
+    height: 100%;
+    background: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+/* Notifications */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.notification {
+    background: var(--primary-color);
+    color: var(--text-color);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--accent-color);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+    max-width: 300px;
+}
+.notification.show {
+    transform: translateX(0);
+}
+.notification i {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+}
+.notification .content {
+    flex: 1;
+}
+.notification h4 {
+    margin-bottom: 0.2rem;
+}
+.notification p {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+/* Achievement Notification */
+.achievement-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: var(--primary-color);
+    padding: 2rem;
+    border-radius: var(--border-radius);
+    border: 3px solid var(--accent-color);
+    text-align: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1200;
+}
+.achievement-notification.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    visibility: visible;
+}
+.achievement-notification i {
+    font-size: 3rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+}
+.achievement-notification h3 {
+    color: var(--text-color);
+    margin-bottom: 0.5rem;
+}
+.achievement-notification .reward {
+    color: var(--accent-color);
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+/* Header Buttons */
+.header-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+.header-buttons .pirate-btn {
+    padding: 0.5rem;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Tooltips */
+[title] {
+    position: relative;
+}
+[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-color);
+    color: var(--text-color);
+    padding: 0.5rem;
+    border-radius: var(--border-radius);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+/* Quest Distribution Chart */
+.distribution-bar {
+    width: 100%;
+    height: 30px;
+    background: #2c3e50;
+    border-radius: 15px;
+    overflow: hidden;
+    display: flex;
+    margin-top: 10px;
+}
+.bar-segment {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8em;
+    transition: width 0.3s ease;
+}
+.bar-segment.easy {
+    background: #2ecc71;
+}
+.bar-segment.medium {
+    background: #f1c40f;
+    color: #2c3e50;
+}
+.bar-segment.hard {
+    background: #e74c3c;
+}
+.bar-segment span {
+    white-space: nowrap;
+    padding: 0 5px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 20px;
+    color: #95a5a6;
+}
+.empty-state i {
+    font-size: 3em;
+    margin-bottom: 10px;
+}
+.empty-state p {
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+.difficulty {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    margin-right: 5px;
+}
+.difficulty.easy {
+    background: #2ecc71;
+    color: white;
+}
+.difficulty.medium {
+    background: #f1c40f;
+    color: #2c3e50;
+}
+.difficulty.hard {
+    background: #e74c3c;
+    color: white;
+}
+.deadline {
+    font-size: 0.8em;
+    color: #95a5a6;
+    display: block;
+    margin-top: 5px;
+}
+
+/* Map Markers */
+.ship-marker {
+    font-size: 2rem;
+    color: #2c3e50;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    transition: transform 0.3s ease;
+}
+.ship-marker i {
+    transition: transform 0.5s ease;
+}
+.ship-marker:hover {
+    transform: scale(1.1);
+}
+.quest-marker {
+    font-size: 1.5rem;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+.quest-marker i {
+    padding: 10px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+.quest-marker:hover {
+    transform: scale(1.1);
+}
+.quest-marker.easy i {
+    color: #2ecc71;
+}
+.quest-marker.medium i {
+    color: #f1c40f;
+}
+.quest-marker.hard i {
+    color: #e74c3c;
+}
+
+/* Media Queries for Responsiveness */
+@media (max-width: 768px) {
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .user-stats {
+    margin-top: 0.5rem;
+  }
+}
+
+@media (max-width: 992px) {
+  /* Switch main layout to single column on narrower screens */
+  main {
+    display: block;
+  }
+  .map-container {
+    min-height: 400px; /* smaller default on tablets */
+  }
+  .active-quests {
+    position: static;
+    width: 100%;
+    margin-top: 1rem;
+    max-height: none;
+  }
+  .map-controls {
+    position: static;
+    margin-top: 1rem;
+    justify-content: center;
+  }
+}
