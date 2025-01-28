@@ -1,74 +1,121 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
-const cors = require('cors');
-
 const app = express();
 const port = process.env.PORT || 3000;
 
+// CORS middleware
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Range');
+    next();
+});
+
 // Middleware
-app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
 
-// Data paths
-const DATA_DIR = path.join(__dirname, 'data');
-const QUESTS_FILE = path.join(DATA_DIR, 'quests.json');
-const USER_DATA_FILE = path.join(DATA_DIR, 'user-data.json');
+// Configure static file serving
+const staticOptions = {
+    setHeaders: (res, path) => {
+        // Set proper MIME types for different file types
+        if (path.endsWith('.mp3')) {
+            res.set({
+                'Content-Type': 'audio/mpeg',
+                'Accept-Ranges': 'bytes',
+                'Cache-Control': 'public, max-age=31536000'
+            });
+        } else if (path.endsWith('.js')) {
+            res.set('Content-Type', 'application/javascript');
+        } else if (path.endsWith('.css')) {
+            res.set('Content-Type', 'text/css');
+        } else if (path.endsWith('.html')) {
+            res.set('Content-Type', 'text/html');
+        }
+    },
+    maxAge: '1y',
+    etag: true,
+    lastModified: true
+};
 
-// Ensure data directory and files exist
-async function initializeDataFiles() {
+// Serve static files
+app.use(express.static('public', staticOptions));
+
+// Special route for sound files to ensure proper handling
+app.get('/sounds/:filename', (req, res) => {
+    const soundPath = path.join(__dirname, 'public', 'sounds', req.params.filename);
+    res.sendFile(soundPath, {
+        headers: {
+            'Content-Type': 'audio/mpeg',
+            'Accept-Ranges': 'bytes'
+        }
+    });
+});
+
+// Data storage paths
+const QUESTS_FILE = path.join(__dirname, 'data', 'quests.json');
+const USER_FILE = path.join(__dirname, 'data', 'user.json');
+
+// Ensure data directory exists
+async function ensureDataDir() {
+    const dataDir = path.join(__dirname, 'data');
     try {
-        await fs.mkdir(DATA_DIR, { recursive: true });
-
-        // Initialize quests.json if it doesn't exist
-        try {
-            await fs.access(QUESTS_FILE);
-        } catch {
-            await fs.writeFile(QUESTS_FILE, JSON.stringify([]));
-        }
-
-        // Initialize user-data.json if it doesn't exist
-        try {
-            await fs.access(USER_DATA_FILE);
-        } catch {
-            const initialUserData = {
-                coins: 0,
-                currentStreak: 0,
-                longestStreak: 0,
-                achievements: [],
-                lastActive: null,
-                items: []
-            };
-            await fs.writeFile(USER_DATA_FILE, JSON.stringify(initialUserData));
-        }
-    } catch (error) {
-        console.error('Failed to initialize data files:', error);
-        throw error;
+        await fs.access(dataDir);
+    } catch {
+        await fs.mkdir(dataDir);
     }
 }
 
-// API Routes
+// Initialize data files if they don't exist
+async function initializeDataFiles() {
+    await ensureDataDir();
+    
+    try {
+        await fs.access(QUESTS_FILE);
+    } catch {
+        await fs.writeFile(QUESTS_FILE, JSON.stringify([]));
+    }
 
-// Get all quests
+    try {
+        await fs.access(USER_FILE);
+    } catch {
+        const defaultUser = {
+            coins: 0,
+            streak: 0,
+            lastLogin: null,
+            achievements: [],
+            inventory: []
+        };
+        await fs.writeFile(USER_FILE, JSON.stringify(defaultUser));
+    }
+}
+
+// Quest Routes
 app.get('/api/quests', async (req, res) => {
     try {
         const data = await fs.readFile(QUESTS_FILE, 'utf8');
         res.json(JSON.parse(data));
     } catch (error) {
-        console.error('Error reading quests:', error);
-        res.status(500).json({ error: 'Failed to read quests' });
+        res.status(500).json({ error: 'Failed to fetch quests' });
     }
 });
 
-// Create a new quest
 app.post('/api/quests', async (req, res) => {
     try {
-        const quests = JSON.parse(await fs.readFile(QUESTS_FILE, 'utf8'));
+        const { title, difficulty, deadline } = req.body;
+        if (!title || !difficulty) {
+            return res.status(400).json({ error: 'Title and difficulty are required' });
+        }
+
+        const data = await fs.readFile(QUESTS_FILE, 'utf8');
+        const quests = JSON.parse(data);
+        
         const newQuest = {
             id: Date.now(),
-            ...req.body,
-            completed: false,
+            title,
+            difficulty,
+            deadline: deadline || null,
+            status: 'active',
             createdAt: new Date().toISOString()
         };
         
@@ -77,152 +124,140 @@ app.post('/api/quests', async (req, res) => {
         
         res.status(201).json(newQuest);
     } catch (error) {
-        console.error('Error creating quest:', error);
         res.status(500).json({ error: 'Failed to create quest' });
     }
 });
 
-// Update a quest
-app.patch('/api/quests/:id', async (req, res) => {
+app.put('/api/quests/:id', async (req, res) => {
     try {
-        const questId = parseInt(req.params.id);
-        const quests = JSON.parse(await fs.readFile(QUESTS_FILE, 'utf8'));
+        const { id } = req.params;
+        const updates = req.body;
         
-        const questIndex = quests.findIndex(q => q.id === questId);
+        const data = await fs.readFile(QUESTS_FILE, 'utf8');
+        const quests = JSON.parse(data);
+        
+        const questIndex = quests.findIndex(q => q.id === parseInt(id));
         if (questIndex === -1) {
             return res.status(404).json({ error: 'Quest not found' });
         }
         
-        const updatedQuest = {
-            ...quests[questIndex],
-            ...req.body,
-            id: questId // Ensure ID doesn't change
-        };
-        
-        quests[questIndex] = updatedQuest;
+        quests[questIndex] = { ...quests[questIndex], ...updates };
         await fs.writeFile(QUESTS_FILE, JSON.stringify(quests, null, 2));
         
-        res.json(updatedQuest);
+        res.json(quests[questIndex]);
     } catch (error) {
-        console.error('Error updating quest:', error);
         res.status(500).json({ error: 'Failed to update quest' });
     }
 });
 
-// Complete a quest
-app.post('/api/quests/:id/complete', async (req, res) => {
+app.delete('/api/quests/:id', async (req, res) => {
     try {
-        const questId = parseInt(req.params.id);
-        const quests = JSON.parse(await fs.readFile(QUESTS_FILE, 'utf8'));
-        const userData = JSON.parse(await fs.readFile(USER_DATA_FILE, 'utf8'));
+        const { id } = req.params;
         
-        const questIndex = quests.findIndex(q => q.id === questId);
+        const data = await fs.readFile(QUESTS_FILE, 'utf8');
+        const quests = JSON.parse(data);
+        
+        const questIndex = quests.findIndex(q => q.id === parseInt(id));
         if (questIndex === -1) {
             return res.status(404).json({ error: 'Quest not found' });
         }
         
-        // Calculate coins earned based on difficulty
-        const coinsEarned = {
-            easy: 10,
-            medium: 20,
-            hard: 30
-        }[quests[questIndex].difficulty] || 10;
+        quests.splice(questIndex, 1);
+        await fs.writeFile(QUESTS_FILE, JSON.stringify(quests, null, 2));
         
-        // Update quest
-        quests[questIndex].completed = true;
-        quests[questIndex].completedAt = new Date().toISOString();
-        
-        // Update user data
-        userData.coins += coinsEarned;
-        
-        // Update streak
-        const today = new Date().toDateString();
-        if (userData.lastActive !== today) {
-            userData.currentStreak++;
-            userData.longestStreak = Math.max(userData.longestStreak, userData.currentStreak);
-            userData.lastActive = today;
-        }
-        
-        // Save changes
-        await Promise.all([
-            fs.writeFile(QUESTS_FILE, JSON.stringify(quests, null, 2)),
-            fs.writeFile(USER_DATA_FILE, JSON.stringify(userData, null, 2))
-        ]);
-        
-        res.json({
-            quest: quests[questIndex],
-            coinsEarned,
-            newTotal: userData.coins
-        });
-    } catch (error) {
-        console.error('Error completing quest:', error);
-        res.status(500).json({ error: 'Failed to complete quest' });
-    }
-});
-
-// Delete a quest
-app.delete('/api/quests/:id', async (req, res) => {
-    try {
-        const questId = parseInt(req.params.id);
-        const quests = JSON.parse(await fs.readFile(QUESTS_FILE, 'utf8'));
-        
-        const newQuests = quests.filter(q => q.id !== questId);
-        if (newQuests.length === quests.length) {
-            return res.status(404).json({ error: 'Quest not found' });
-        }
-        
-        await fs.writeFile(QUESTS_FILE, JSON.stringify(newQuests, null, 2));
         res.status(204).send();
     } catch (error) {
-        console.error('Error deleting quest:', error);
         res.status(500).json({ error: 'Failed to delete quest' });
     }
 });
 
-// Get user data
-app.get('/api/user-data', async (req, res) => {
+// User Routes
+app.get('/api/user', async (req, res) => {
     try {
-        const data = await fs.readFile(USER_DATA_FILE, 'utf8');
+        const data = await fs.readFile(USER_FILE, 'utf8');
         res.json(JSON.parse(data));
     } catch (error) {
-        console.error('Error reading user data:', error);
-        res.status(500).json({ error: 'Failed to read user data' });
+        res.status(500).json({ error: 'Failed to fetch user data' });
     }
 });
 
-// Update user data
-app.post('/api/user-data', async (req, res) => {
+app.put('/api/user', async (req, res) => {
     try {
-        const currentData = JSON.parse(await fs.readFile(USER_DATA_FILE, 'utf8'));
-        const newData = {
-            ...currentData,
-            ...req.body
-        };
+        const updates = req.body;
+        const data = await fs.readFile(USER_FILE, 'utf8');
+        const user = JSON.parse(data);
         
-        await fs.writeFile(USER_DATA_FILE, JSON.stringify(newData, null, 2));
-        res.json(newData);
+        const updatedUser = { ...user, ...updates };
+        await fs.writeFile(USER_FILE, JSON.stringify(updatedUser, null, 2));
+        
+        res.json(updatedUser);
     } catch (error) {
-        console.error('Error updating user data:', error);
         res.status(500).json({ error: 'Failed to update user data' });
     }
 });
 
-// Serve index.html for all other routes
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+// Achievement Routes
+app.post('/api/achievements', async (req, res) => {
+    try {
+        const { achievement } = req.body;
+        if (!achievement) {
+            return res.status(400).json({ error: 'Achievement data is required' });
+        }
+
+        const data = await fs.readFile(USER_FILE, 'utf8');
+        const user = JSON.parse(data);
+        
+        if (!user.achievements.some(a => a.id === achievement.id)) {
+            user.achievements.push({
+                ...achievement,
+                unlockedAt: new Date().toISOString()
+            });
+            
+            await fs.writeFile(USER_FILE, JSON.stringify(user, null, 2));
+        }
+        
+        res.status(201).json(user.achievements);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to add achievement' });
+    }
 });
 
-// Initialize data files and start server
-async function start() {
+// Streak Routes
+app.post('/api/streak/check', async (req, res) => {
     try {
-        await initializeDataFiles();
-        app.listen(port, () => {
-            console.log(`Server running at http://localhost:${port}`);
-        });
+        const data = await fs.readFile(USER_FILE, 'utf8');
+        const user = JSON.parse(data);
+        
+        const now = new Date();
+        const lastLogin = user.lastLogin ? new Date(user.lastLogin) : null;
+        
+        if (!lastLogin) {
+            user.streak = 1;
+        } else {
+            const daysSinceLastLogin = Math.floor((now - lastLogin) / (1000 * 60 * 60 * 24));
+            
+            if (daysSinceLastLogin === 1) {
+                user.streak += 1;
+            } else if (daysSinceLastLogin > 1) {
+                user.streak = 1;
+            }
+        }
+        
+        user.lastLogin = now.toISOString();
+        await fs.writeFile(USER_FILE, JSON.stringify(user, null, 2));
+        
+        res.json({ streak: user.streak });
     } catch (error) {
-        console.error('Failed to start server:', error);
-        process.exit(1);
+        res.status(500).json({ error: 'Failed to update streak' });
     }
-}
+});
 
-start();
+// Initialize data and start server
+initializeDataFiles().then(() => {
+    app.listen(port, () => {
+        console.log(`Pirate app server running at http://localhost:${port}`);
+    });
+}).catch(error => {
+    console.error('Failed to initialize server:', error);
+    process.exit(1);
+});
