@@ -292,3 +292,331 @@ class PirateMap {
   // Expose globally
   window.pirateMap = new PirateMap();
   
+  const PirateMapQuestVisualization = {
+    mapContainer: null,
+    questElements: new Map(),
+    isDragging: false,
+    selectedQuest: null,
+    
+    init() {
+        this.mapContainer = document.getElementById('map-container');
+        if (!this.mapContainer) {
+            console.error('Map container not found');
+            return;
+        }
+
+        // Initialize map interaction handlers
+        this.initMapInteractions();
+        
+        // Initialize quest display
+        this.refreshQuests();
+
+        // Listen for quest updates
+        window.addEventListener('questsUpdated', () => this.refreshQuests());
+        
+        // Listen for weather changes
+        window.addEventListener('weatherChange', (event) => {
+            this.updateWeatherEffects(event.detail.weather);
+        });
+    },
+
+    initMapInteractions() {
+        // Quest creation on map click
+        this.mapContainer.addEventListener('click', (event) => {
+            if (!this.isDragging && event.target === this.mapContainer) {
+                const position = this.getClickPosition(event);
+                this.showQuestForm(position);
+            }
+        });
+
+        // Prevent text selection while dragging
+        this.mapContainer.addEventListener('selectstart', (e) => {
+            if (this.isDragging) e.preventDefault();
+        });
+    },
+
+    async refreshQuests() {
+        try {
+            // Clear existing quest elements
+            this.questElements.forEach(element => element.remove());
+            this.questElements.clear();
+
+            // Get quests from store
+            const quests = Store.getAllQuests();
+            
+            // Create elements for each quest
+            quests.forEach(quest => {
+                if (!quest.completed) {
+                    this.createQuestElement(quest);
+                }
+            });
+        } catch (error) {
+            console.error('Failed to refresh quests:', error);
+        }
+    },
+
+    createQuestElement(quest) {
+        const element = document.createElement('div');
+        element.className = 'quest-marker';
+        element.dataset.questId = quest.id;
+        
+        // Set position from quest data or generate new position
+        const position = quest.position || this.generateRandomPosition();
+        element.style.left = position.x + 'px';
+        element.style.top = position.y + 'px';
+
+        // Add difficulty indicator
+        element.classList.add(`difficulty-${quest.difficulty}`);
+
+        // Add quest info
+        const tooltip = document.createElement('div');
+        tooltip.className = 'quest-tooltip';
+        tooltip.innerHTML = `
+            <h3>${quest.title}</h3>
+            <p>${quest.description || ''}</p>
+            <p class="difficulty">Difficulty: ${quest.difficulty}</p>
+        `;
+        element.appendChild(tooltip);
+
+        // Add drag functionality
+        this.addDragHandlers(element);
+
+        // Add click handler for quest interaction
+        element.addEventListener('click', (event) => {
+            event.stopPropagation();
+            this.showQuestDetails(quest);
+        });
+
+        // Store reference and add to map
+        this.questElements.set(quest.id, element);
+        this.mapContainer.appendChild(element);
+
+        // Update quest position in store
+        if (!quest.position) {
+            Store.updateQuest(quest.id, { position });
+        }
+    },
+
+    addDragHandlers(element) {
+        let startX, startY, initialX, initialY;
+
+        element.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return; // Only handle left click
+            
+            this.isDragging = true;
+            element.classList.add('dragging');
+            
+            startX = e.clientX - element.offsetLeft;
+            startY = e.clientY - element.offsetTop;
+            initialX = element.offsetLeft;
+            initialY = element.offsetTop;
+
+            const mouseMoveHandler = (e) => {
+                if (!this.isDragging) return;
+
+                e.preventDefault();
+                
+                const x = e.clientX - startX;
+                const y = e.clientY - startY;
+                
+                // Constrain to map boundaries
+                const bounds = this.mapContainer.getBoundingClientRect();
+                const maxX = bounds.width - element.offsetWidth;
+                const maxY = bounds.height - element.offsetHeight;
+                
+                element.style.left = Math.max(0, Math.min(maxX, x)) + 'px';
+                element.style.top = Math.max(0, Math.min(maxY, y)) + 'px';
+            };
+
+            const mouseUpHandler = async () => {
+                this.isDragging = false;
+                element.classList.remove('dragging');
+                
+                // Update quest position if it changed
+                if (initialX !== element.offsetLeft || initialY !== element.offsetTop) {
+                    const questId = element.dataset.questId;
+                    const position = {
+                        x: parseInt(element.style.left),
+                        y: parseInt(element.style.top)
+                    };
+                    
+                    try {
+                        await Store.updateQuest(questId, { position });
+                    } catch (error) {
+                        console.error('Failed to update quest position:', error);
+                        // Revert to initial position on failure
+                        element.style.left = initialX + 'px';
+                        element.style.top = initialY + 'px';
+                    }
+                }
+
+                // Remove temporary handlers
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            };
+
+            // Add temporary handlers
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+        });
+    },
+
+    showQuestForm(position) {
+        const formHtml = `
+            <div class="quest-form">
+                <h3>Create New Quest</h3>
+                <input type="text" id="quest-title" placeholder="Quest Title" required>
+                <textarea id="quest-description" placeholder="Quest Description"></textarea>
+                <select id="quest-difficulty">
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+                <div class="form-buttons">
+                    <button type="button" id="create-quest">Create</button>
+                    <button type="button" id="cancel-quest">Cancel</button>
+                </div>
+            </div>
+        `;
+
+        const formContainer = document.createElement('div');
+        formContainer.className = 'quest-form-container';
+        formContainer.innerHTML = formHtml;
+        formContainer.style.left = position.x + 'px';
+        formContainer.style.top = position.y + 'px';
+
+        this.mapContainer.appendChild(formContainer);
+
+        // Handle form submission
+        const createButton = formContainer.querySelector('#create-quest');
+        createButton.addEventListener('click', async () => {
+            const title = formContainer.querySelector('#quest-title').value.trim();
+            const description = formContainer.querySelector('#quest-description').value.trim();
+            const difficulty = formContainer.querySelector('#quest-difficulty').value;
+
+            if (!title) {
+                alert('Please enter a quest title');
+                return;
+            }
+
+            try {
+                await Store.createQuest({
+                    title,
+                    description,
+                    difficulty,
+                    position
+                });
+                
+                formContainer.remove();
+                await this.refreshQuests();
+                SoundEffects.play('newQuest');
+            } catch (error) {
+                console.error('Failed to create quest:', error);
+                alert('Failed to create quest. Please try again.');
+            }
+        });
+
+        // Handle cancellation
+        const cancelButton = formContainer.querySelector('#cancel-quest');
+        cancelButton.addEventListener('click', () => {
+            formContainer.remove();
+        });
+    },
+
+    async showQuestDetails(quest) {
+        const detailsHtml = `
+            <div class="quest-details">
+                <h3>${quest.title}</h3>
+                <p>${quest.description || 'No description provided.'}</p>
+                <p class="difficulty">Difficulty: ${quest.difficulty}</p>
+                <div class="quest-actions">
+                    <button id="complete-quest">Complete Quest</button>
+                    <button id="delete-quest">Delete Quest</button>
+                    <button id="close-details">Close</button>
+                </div>
+            </div>
+        `;
+
+        const detailsContainer = document.createElement('div');
+        detailsContainer.className = 'quest-details-container';
+        detailsContainer.innerHTML = detailsHtml;
+
+        const questElement = this.questElements.get(quest.id);
+        const rect = questElement.getBoundingClientRect();
+        detailsContainer.style.left = rect.right + 'px';
+        detailsContainer.style.top = rect.top + 'px';
+
+        this.mapContainer.appendChild(detailsContainer);
+
+        // Handle quest completion
+        const completeButton = detailsContainer.querySelector('#complete-quest');
+        completeButton.addEventListener('click', async () => {
+            try {
+                await Store.completeQuest(quest.id);
+                detailsContainer.remove();
+                await this.refreshQuests();
+                SoundEffects.play('questComplete');
+            } catch (error) {
+                console.error('Failed to complete quest:', error);
+                alert('Failed to complete quest. Please try again.');
+            }
+        });
+
+        // Handle quest deletion
+        const deleteButton = detailsContainer.querySelector('#delete-quest');
+        deleteButton.addEventListener('click', async () => {
+            if (confirm('Are you sure you want to delete this quest?')) {
+                try {
+                    await Store.deleteQuest(quest.id);
+                    detailsContainer.remove();
+                    await this.refreshQuests();
+                } catch (error) {
+                    console.error('Failed to delete quest:', error);
+                    alert('Failed to delete quest. Please try again.');
+                }
+            }
+        });
+
+        // Handle close button
+        const closeButton = detailsContainer.querySelector('#close-details');
+        closeButton.addEventListener('click', () => {
+            detailsContainer.remove();
+        });
+    },
+
+    generateRandomPosition() {
+        const padding = 50; // Padding from map edges
+        const mapRect = this.mapContainer.getBoundingClientRect();
+        
+        return {
+            x: padding + Math.random() * (mapRect.width - 2 * padding),
+            y: padding + Math.random() * (mapRect.height - 2 * padding)
+        };
+    },
+
+    getClickPosition(event) {
+        const rect = this.mapContainer.getBoundingClientRect();
+        return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+        };
+    },
+
+    updateWeatherEffects(weather) {
+        // Remove existing weather classes
+        this.mapContainer.classList.remove('weather-clear', 'weather-storm', 'weather-fog');
+        
+        // Add new weather class
+        this.mapContainer.classList.add(`weather-${weather}`);
+        
+        // Play weather sound
+        if (weather === 'storm') {
+            SoundEffects.play('storm');
+        }
+    }
+};
+
+// Initialize the map when the DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    PirateMapQuestVisualization.init();
+});
